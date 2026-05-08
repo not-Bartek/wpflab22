@@ -5,5 +5,23 @@
     Title="Edytor Automatów"
     Width="800"
     Height="600">
-    <Grid />
+    <Grid>
+        <StackPanel Orientation="Horizontal">
+            <Canvas x:Name="Plotno"
+                Background="WhiteSmoke"
+                MouseLeftButtonDown="PMouseLeftButtonDown"
+                Width="600"
+                Height = "584">
+            </Canvas>
+            
+            <StackPanel Width="194">
+                <TextBlock Text="Edycja Stanów" FontSize="20" FontWeight="Bold"></TextBlock>
+
+                <Button x:Name="usunButton" Margin="10,10" BorderBrush="Black" BorderThickness="1" Click="DestroyActive" IsEnabled="False">
+                    <TextBlock Text="Usuń stan" FontSize="13"></TextBlock>
+                </Button>
+            </StackPanel>
+        </StackPanel>
+        
+    </Grid>
 </Window>
