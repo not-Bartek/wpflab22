@@ -20,6 +20,13 @@
                 <Button x:Name="usunButton" Margin="10,10" BorderBrush="Black" BorderThickness="1" Click="DestroyActive" IsEnabled="False">
                     <TextBlock Text="Usuń stan" FontSize="13"></TextBlock>
                 </Button>
+
+                <CheckBox x:Name="CheckBoxAkceptujacy"  IsEnabled="False" Click="UstawAkceptujacy">
+                    <TextBlock Text="Oznacz jako akceptujący" FontSize="13"></TextBlock>
+                </CheckBox>
+                <CheckBox x:Name="CheckBoxPoczatkowy"  IsEnabled="False" Click="UstawPoczatkowy">
+                    <TextBlock Text="Oznacz jako początkowy" FontSize="13"></TextBlock>
+                </CheckBox>
             </StackPanel>
         </StackPanel>
         

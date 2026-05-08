@@ -14,6 +14,12 @@ public partial class MainWindow : Window
     private Ellipse _active = null;
     private Grid _activeGrid = null;
     private Grid _ruszany = null;
+
+    private Ellipse _akceptujacy = null;
+    private Grid _akceptujacyGrid = null;
+
+    private Ellipse _poczatkowy = null;
+    private Grid _poczatkowyGrid = null;
     public MainWindow()
     {
         InitializeComponent();
@@ -28,8 +34,37 @@ public partial class MainWindow : Window
             _active = null;
             _activeGrid = null;
             usunButton.IsEnabled = false;
+            CheckBoxPoczatkowy.IsEnabled = false;
+            CheckBoxAkceptujacy.IsEnabled = false;
         }
     }
+
+    private void UstawPoczatkowy(object sender, RoutedEventArgs e)
+    {
+        if (_active != null)
+        {
+            if (_poczatkowy != null)
+            {
+                _poczatkowy.Stroke = Brushes.Black;
+            }
+           
+            _poczatkowy = _active;
+            _poczatkowyGrid = _activeGrid;
+            _poczatkowy.Stroke = new SolidColorBrush(Color.FromRgb(245, 161, 66));
+            
+
+        }
+    }
+
+    private void UstawAkceptujacy(object sender, RoutedEventArgs e)
+    {
+        if (_active != null)
+        {
+            _akceptujacy = _active;
+            _akceptujacyGrid = _activeGrid;
+        }
+    }
+
     private void PMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ClickCount == 2)
@@ -69,6 +104,8 @@ public partial class MainWindow : Window
                 _activeGrid = grid;
                 _active = noweKolko;
                 usunButton.IsEnabled = true;
+                CheckBoxPoczatkowy.IsEnabled = true;
+                CheckBoxAkceptujacy.IsEnabled = true;
             };
 
 
@@ -84,6 +121,8 @@ public partial class MainWindow : Window
                 _activeGrid = grid;
                 _active = noweKolko;
                 usunButton.IsEnabled = true;
+                CheckBoxPoczatkowy.IsEnabled = true;
+                CheckBoxAkceptujacy.IsEnabled = true;
                 _czyrusza = true;
                 _ruszany = _activeGrid;
                 //noweKolko.Fill = new SolidColorBrush(Color.FromArgb(100, 227, 66, 245));
@@ -135,6 +174,8 @@ public partial class MainWindow : Window
                 _active.Fill = new SolidColorBrush(Color.FromArgb(20, 150, 150, 150));
             }
             usunButton.IsEnabled = false;
+            CheckBoxPoczatkowy.IsEnabled = false;
+            CheckBoxAkceptujacy.IsEnabled = false;
             _activeGrid = null;
             _active = null;
         }
