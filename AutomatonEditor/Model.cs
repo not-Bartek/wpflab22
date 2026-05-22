@@ -6,22 +6,34 @@ namespace AutomatonEditor;
 
 public class Automaton : INotifyPropertyChanged
 {
+    private State? _selectedState;
+
     public ObservableCollection<State> States { get; set; } = [];
     public ObservableCollection<Transition> Transitions { get; set; } = [];
 
+    public State? SelectedState
+    {
+        get => _selectedState;
+        set { _selectedState = value; OnPropertyChanged(); }
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
+    protected void OnPropertyChanged([CallerMemberName] string? name = null) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }
 
 public class State : INotifyPropertyChanged
 {
     private double _x, _y;
     private bool _isInitial, _isAccepting, _isSelected;
+
     public string? Name { get; set; }
     public double X { get => _x; set { _x = value; OnPropertyChanged(); } }
     public double Y { get => _y; set { _y = value; OnPropertyChanged(); } }
     public bool IsInitial { get => _isInitial; set { _isInitial = value; OnPropertyChanged(); } }
     public bool IsAccepting { get => _isAccepting; set { _isAccepting = value; OnPropertyChanged(); } }
     public bool IsSelected { get => _isSelected; set { _isSelected = value; OnPropertyChanged(); } }
+
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
@@ -68,9 +80,7 @@ public class Transition : INotifyPropertyChanged
     private void State_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == "X" || e.PropertyName == "Y")
-        {
             RefreshCoordinates();
-        }
     }
 
     private void RefreshCoordinates()

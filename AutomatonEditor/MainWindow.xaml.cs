@@ -1,184 +1,179 @@
-﻿using System;
+﻿using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Shapes;
 
 namespace AutomatonEditor;
 
 public partial class MainWindow : Window
 {
-    private bool _czyrusza = false;
-    private int _kolka = 0;
-    private Ellipse _active = null;
-    private Grid _activeGrid = null;
-    private Grid _ruszany = null;
+    private readonly Automaton _automaton = new();
 
-    private Ellipse _akceptujacy = null;
-    private Grid _akceptujacyGrid = null;
+    private State? _dragState;
+    private Point _dragStartPos;
+    private Point _dragOffset;
+    private bool _isDragging;
+    private int _stateCounter;
 
-    private Ellipse _poczatkowy = null;
-    private Grid _poczatkowyGrid = null;
+    private const double DragThreshold = 4.0;
+    private const double StateRadius = 25.0;
+    private const double StateDiameter = StateRadius * 2;
+
     public MainWindow()
     {
         InitializeComponent();
-    }
-    private void DestroyActive(object sender, RoutedEventArgs e)
-    {
-        
-        if (_active != null)
-        {
-            Plotno.Children.Remove((UIElement) _active);
-            Plotno.Children.Remove((UIElement) _activeGrid);
-            _active = null;
-            _activeGrid = null;
-            usunButton.IsEnabled = false;
-            CheckBoxPoczatkowy.IsEnabled = false;
-            CheckBoxAkceptujacy.IsEnabled = false;
-        }
+        DataContext = _automaton;
     }
 
-    private void UstawPoczatkowy(object sender, RoutedEventArgs e)
+    private void DrawingArea_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (_active != null)
+        var pos = e.GetPosition(DrawingArea);
+        var state = FindStateAt(pos);
+
+        if (state == null)
         {
-            if (_poczatkowy != null)
+            if (e.ClickCount == 2)
             {
-                _poczatkowy.Stroke = Brushes.Black;
+                AddState(pos);
+                e.Handled = true;
             }
-           
-            _poczatkowy = _active;
-            _poczatkowyGrid = _activeGrid;
-            _poczatkowy.Stroke = new SolidColorBrush(Color.FromRgb(245, 161, 66));
-            
-
+            else
+            {
+                SelectState(null);
+            }
+            return;
         }
+
+        _dragState = state;
+        _dragStartPos = pos;
+        _dragOffset = new Point(pos.X - state.X, pos.Y - state.Y);
+        _isDragging = false;
+        Mouse.Capture(DrawingArea);
+        e.Handled = true;
     }
 
-    private void UstawAkceptujacy(object sender, RoutedEventArgs e)
+    private void DrawingArea_PreviewMouseMove(object sender, MouseEventArgs e)
     {
-        if (_active != null)
+        if (_dragState == null || e.LeftButton != MouseButtonState.Pressed) return;
+
+        var pos = e.GetPosition(DrawingArea);
+
+        if (!_isDragging)
         {
-            _akceptujacy = _active;
-            _akceptujacyGrid = _activeGrid;
+            var delta = pos - _dragStartPos;
+            if (delta.Length < DragThreshold) return;
+            _isDragging = true;
         }
+
+        _dragState.X = Math.Max(0, Math.Min(DrawingArea.ActualWidth - StateDiameter, pos.X - _dragOffset.X));
+        _dragState.Y = Math.Max(0, Math.Min(DrawingArea.ActualHeight - StateDiameter, pos.Y - _dragOffset.Y));
     }
 
-    private void PMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void DrawingArea_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
-        if (e.ClickCount == 2)
+        if (_dragState == null) return;
+
+        Mouse.Capture(null);
+
+        if (!_isDragging)
+            SelectState(_dragState);
+
+        _dragState = null;
+        _isDragging = false;
+        e.Handled = true;
+    }
+
+    private State? FindStateAt(Point point)
+    {
+        State? found = null;
+        VisualTreeHelper.HitTest(
+            StatesControl,
+            null,
+            result =>
+            {
+                if (result.VisualHit is FrameworkElement fe && fe.DataContext is State s)
+                {
+                    found = s;
+                    return HitTestResultBehavior.Stop;
+                }
+                return HitTestResultBehavior.Continue;
+            },
+            new PointHitTestParameters(point));
+        return found;
+    }
+
+    private void AddState(Point center)
+    {
+        var state = new State
         {
+            Name = $"q{_stateCounter++}",
+            X = center.X - StateRadius,
+            Y = center.Y - StateRadius,
+            IsInitial = _automaton.States.Count == 0
+        };
+        _automaton.States.Add(state);
+        SelectState(state);
+    }
 
-            //dwuklik - dodanie kółka
-            Point pozycja = e.GetPosition(this);
-            
-            Ellipse noweKolko = new Ellipse
-            {
-              
-                Width = 40,
-                Height = 40,
-                Fill = new SolidColorBrush(Color.FromArgb(20,150, 150, 150)),
-                Stroke = Brushes.Black,
-                StrokeThickness = 1
-            };
+    private void SelectState(State? state)
+    {
+        if (_automaton.SelectedState != null)
+            _automaton.SelectedState.IsSelected = false;
 
-            TextBlock title = new TextBlock { Text = $"q{_kolka}",
-                HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment =VerticalAlignment.Center
-            };
+        _automaton.SelectedState = state;
 
-            var grid = new Grid();
-            
+        bool enabled = state != null;
+        DeleteButton.IsEnabled = enabled;
+        AcceptingCheckbox.IsEnabled = enabled;
+        InitialCheckbox.IsEnabled = enabled;
+        AcceptingCheckbox.IsChecked = state?.IsAccepting ?? false;
+        InitialCheckbox.IsChecked = state?.IsInitial ?? false;
 
+        if (state != null)
+            state.IsSelected = true;
+    }
 
-            grid.MouseLeftButtonDown += (s, args) =>
-            {
-                args.Handled = true;
+    private void DeleteState_Click(object sender, RoutedEventArgs e)
+    {
+        var state = _automaton.SelectedState;
+        if (state == null) return;
 
-                
-                if (_active != null)
-                {
-                    _active.Fill = new SolidColorBrush(Color.FromArgb(20, 150, 150, 150));
-                }
-                noweKolko.Fill = new SolidColorBrush(Color.FromArgb(80, 66, 144, 245));
-                _activeGrid = grid;
-                _active = noweKolko;
-                usunButton.IsEnabled = true;
-                CheckBoxPoczatkowy.IsEnabled = true;
-                CheckBoxAkceptujacy.IsEnabled = true;
-            };
+        foreach (var t in _automaton.Transitions.Where(t => t.Source == state || t.Target == state).ToList())
+            _automaton.Transitions.Remove(t);
 
+        SelectState(null);
+        _automaton.States.Remove(state);
+    }
 
+    private void Accepting_Click(object sender, RoutedEventArgs e)
+    {
+        if (_automaton.SelectedState != null)
+            _automaton.SelectedState.IsAccepting = AcceptingCheckbox.IsChecked == true;
+    }
 
-            grid.MouseRightButtonDown += (s, args) =>
-            {
+    private void Initial_Click(object sender, RoutedEventArgs e)
+    {
+        if (_automaton.SelectedState == null) return;
 
-                if (_active != null)
-                {
-                    _active.Fill = new SolidColorBrush(Color.FromArgb(20, 150, 150, 150));
-                }
-                noweKolko.Fill = new SolidColorBrush(Color.FromArgb(80, 66, 144, 245));
-                _activeGrid = grid;
-                _active = noweKolko;
-                usunButton.IsEnabled = true;
-                CheckBoxPoczatkowy.IsEnabled = true;
-                CheckBoxAkceptujacy.IsEnabled = true;
-                _czyrusza = true;
-                _ruszany = _activeGrid;
-                //noweKolko.Fill = new SolidColorBrush(Color.FromArgb(100, 227, 66, 245));
-            };
-
-            grid.MouseMove += (s, args) =>
-            {
-                if (!_czyrusza || _active == null || _ruszany == null) return;
-                //_active.Fill = new SolidColorBrush(Color.FromArgb(100, 245, 233, 66));
-
-                Point punktAktualny = e.GetPosition(Plotno);
-
-                Canvas.SetLeft(_ruszany, punktAktualny.X-20);
-                Canvas.SetTop(_ruszany, punktAktualny.Y-20);
-            };
-            grid.MouseRightButtonUp += (s, args) =>
-            {
-                //_active.Fill = new SolidColorBrush(Color.FromArgb(20, 150, 150, 150));
-                _ruszany = null;
-                _czyrusza = false;
-            };
-
-
-            grid.Children.Add(title);
-            grid.Children.Add(noweKolko);
-
-
-            //Canvas.SetLeft(noweKolko, pozycja.X - 20);
-            //Canvas.SetTop(noweKolko, pozycja.Y - 20);
-
-            //Canvas.SetLeft(title, pozycja.X - 20);
-            //Canvas.SetTop(title, pozycja.Y - 20);
-
-            Canvas.SetLeft(grid, pozycja.X - 20);
-            Canvas.SetTop(grid, pozycja.Y - 20);
-
-            Plotno.Children.Add(grid);
-
-            _kolka++;
-
-
-
-
+        if (InitialCheckbox.IsChecked == true)
+        {
+            foreach (var s in _automaton.States)
+                s.IsInitial = false;
+            _automaton.SelectedState.IsInitial = true;
         }
         else
         {
-            if (_active != null)
-            {
-                _active.Fill = new SolidColorBrush(Color.FromArgb(20, 150, 150, 150));
-            }
-            usunButton.IsEnabled = false;
-            CheckBoxPoczatkowy.IsEnabled = false;
-            CheckBoxAkceptujacy.IsEnabled = false;
-            _activeGrid = null;
-            _active = null;
+            _automaton.SelectedState.IsInitial = false;
         }
-        
+    }
+
+    private void AddTransition_Click(object sender, RoutedEventArgs e)
+    {
+        var source = SourceStateCombo.SelectedItem as State;
+        var target = TargetStateCombo.SelectedItem as State;
+
+        if (source == null || target == null || source == target) return;
+
+        _automaton.Transitions.Add(new Transition { Source = source, Target = target });
     }
 }
