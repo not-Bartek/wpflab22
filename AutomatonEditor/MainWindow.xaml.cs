@@ -393,10 +393,16 @@ public partial class MainWindow : Window
     }
 
     private void FillPreview_Click(object sender, MouseButtonEventArgs e)
-        => ShowColorPickerPopup(FillColorBox, (UIElement)sender);
+    {
+        e.Handled = true;
+        ShowColorPickerPopup(FillColorBox, (UIElement)sender);
+    }
 
     private void StrokePreview_Click(object sender, MouseButtonEventArgs e)
-        => ShowColorPickerPopup(StrokeColorBox, (UIElement)sender);
+    {
+        e.Handled = true;
+        ShowColorPickerPopup(StrokeColorBox, (UIElement)sender);
+    }
 
     private static readonly string[] PaletteColors =
     [
