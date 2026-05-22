@@ -232,8 +232,12 @@
                                      TextChanged="WordInputBox_TextChanged"/>
 
                             <Button Content="Uruchom symulację"
-                                    Padding="6,5" Margin="0,0,0,10"
+                                    Padding="6,5" Margin="0,0,0,4"
                                     Click="StartSim_Click"/>
+                            <Button x:Name="EndSimButton" Content="Zakończ symulację"
+                                    Padding="6,5" Margin="0,0,0,10"
+                                    IsEnabled="False"
+                                    Click="EndSim_Click"/>
 
                             <Border BorderBrush="#DDDDDD" BorderThickness="1"
                                     Background="White" Padding="6" Margin="0,0,0,10"

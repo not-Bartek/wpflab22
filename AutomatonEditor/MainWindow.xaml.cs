@@ -408,6 +408,15 @@ public partial class MainWindow : Window
         var newSymbols = label.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(s => s.Trim()).ToList();
 
+        var multiChar = newSymbols.Where(s => s.Length != 1).ToList();
+        if (multiChar.Count > 0)
+        {
+            MessageBox.Show(
+                $"Każdy symbol etykiety musi być pojedynczym znakiem. Nieprawidłowe: {string.Join(", ", multiChar)}.",
+                "Błąd", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
         var usedSymbols = _automaton.Transitions
             .Where(t => t.Source == source)
             .SelectMany(t => (t.Label ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -908,6 +917,8 @@ public partial class MainWindow : Window
         UpdateSimButtons();
     }
 
+    private void EndSim_Click(object sender, RoutedEventArgs e) => ResetSimulationState();
+
     private void ResetSim_Click(object sender, RoutedEventArgs e)
     {
         _animTimer.Stop();
@@ -1042,5 +1053,6 @@ public partial class MainWindow : Window
         StartAnimButton.IsEnabled = isReady && !atEnd && !animating;
         StopAnimButton.IsEnabled = animating;
         ResetSimButton.IsEnabled = isReady && !animating;
+        EndSimButton.IsEnabled = isReady && !animating;
     }
 }
