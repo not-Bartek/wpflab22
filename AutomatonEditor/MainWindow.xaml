@@ -1,189 +1,312 @@
 ﻿<Window x:Class="AutomatonEditor.MainWindow"
+        x:Name="RootWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:AutomatonEditor"
         Title="Edytor Automatów"
-        Width="1120" Height="680"
-        MinWidth="820" MinHeight="520">
+        Width="1200" Height="720"
+        MinWidth="900" MinHeight="560">
     <Window.Resources>
         <local:HexToBrushConverter x:Key="HexToBrushConverter"/>
     </Window.Resources>
 
     <DockPanel LastChildFill="True">
 
-        <Border DockPanel.Dock="Right" Width="240"
-                Background="#F5F5F5" BorderBrush="#D0D0D0" BorderThickness="1,0,0,0">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <StackPanel Margin="12">
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_Plik">
+                <MenuItem Header="Importuj JSON..." Click="MenuImport_Click"/>
+                <MenuItem Header="Eksportuj JSON..." Click="MenuExportJson_Click"/>
+                <MenuItem Header="Eksportuj jako obraz..." Click="MenuExportImage_Click"/>
+            </MenuItem>
+        </Menu>
 
-                    <TextBlock Text="Edycja stanu" FontSize="15" FontWeight="Bold" Margin="0,0,0,10"/>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="250"/>
+            </Grid.ColumnDefinitions>
 
-                    <Button x:Name="DeleteButton" Content="Usuń stan"
-                            IsEnabled="False" Padding="6,5" Margin="0,0,0,8"
-                            Click="DeleteState_Click"/>
+            <Grid x:Name="DrawingArea"
+                  Grid.Column="0"
+                  Background="WhiteSmoke"
+                  ClipToBounds="True"
+                  PreviewMouseLeftButtonDown="DrawingArea_PreviewMouseLeftButtonDown"
+                  PreviewMouseMove="DrawingArea_PreviewMouseMove"
+                  PreviewMouseLeftButtonUp="DrawingArea_PreviewMouseLeftButtonUp">
 
-                    <CheckBox x:Name="AcceptingCheckbox"
-                              Content="Oznacz jako akceptujący"
-                              IsEnabled="False" Margin="0,0,0,6"
-                              Click="Accepting_Click"/>
+                <Canvas x:Name="TransitionsCanvas"/>
 
-                    <CheckBox x:Name="InitialCheckbox"
-                              Content="Oznacz jako początkowy"
-                              IsEnabled="False" Margin="0,0,0,10"
-                              Click="Initial_Click"/>
+                <ItemsControl x:Name="StatesControl" ItemsSource="{Binding States}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <Canvas Background="Transparent"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemContainerStyle>
+                        <Style TargetType="ContentPresenter">
+                            <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                            <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                        </Style>
+                    </ItemsControl.ItemContainerStyle>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Width="{Binding Diameter}" Height="{Binding Diameter}" Background="Transparent">
+                                <Ellipse x:Name="OuterEllipse"
+                                         Width="{Binding Diameter}" Height="{Binding Diameter}"
+                                         Fill="{Binding FillColor, Converter={StaticResource HexToBrushConverter}}"
+                                         Stroke="{Binding StrokeColor, Converter={StaticResource HexToBrushConverter}}"
+                                         StrokeThickness="{Binding StrokeThickness}"/>
+                                <Ellipse x:Name="InnerEllipse"
+                                         Width="{Binding InnerDiameter}" Height="{Binding InnerDiameter}"
+                                         Fill="Transparent"
+                                         Stroke="{Binding StrokeColor, Converter={StaticResource HexToBrushConverter}}"
+                                         StrokeThickness="{Binding StrokeThickness}"
+                                         Visibility="Collapsed"
+                                         IsHitTestVisible="False"/>
+                                <Ellipse x:Name="SimActiveOverlay"
+                                         Width="{Binding Diameter}" Height="{Binding Diameter}"
+                                         Fill="#8833CC55"
+                                         Visibility="Collapsed"
+                                         IsHitTestVisible="False"/>
+                                <Ellipse x:Name="SelectionOverlay"
+                                         Width="{Binding Diameter}" Height="{Binding Diameter}"
+                                         Fill="#440066FF"
+                                         Visibility="Collapsed"
+                                         IsHitTestVisible="False"/>
+                                <TextBlock Text="{Binding Name}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           FontSize="12" FontWeight="SemiBold"
+                                           IsHitTestVisible="False"/>
+                            </Grid>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding IsAccepting}" Value="True">
+                                    <Setter TargetName="InnerEllipse" Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsInitial}" Value="True">
+                                    <Setter TargetName="OuterEllipse" Property="Stroke" Value="#E65100"/>
+                                    <Setter TargetName="OuterEllipse" Property="StrokeThickness" Value="3"/>
+                                    <Setter TargetName="InnerEllipse" Property="Stroke" Value="#E65100"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                    <Setter TargetName="SelectionOverlay" Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                    <Setter TargetName="SimActiveOverlay" Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
 
-                    <StackPanel x:Name="StateAppearancePanel" IsEnabled="False">
+            <TabControl Grid.Column="1"
+                        x:Name="MainTabControl"
+                        BorderThickness="1,0,0,0"
+                        SelectionChanged="MainTabControl_SelectionChanged">
 
-                        <TextBlock Text="Kolor wypełnienia" FontSize="11" Foreground="#555" Margin="0,0,0,3"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                            <TextBox x:Name="FillColorBox" Width="120" Text="#FFFFFF"
-                                     Padding="3,2" VerticalContentAlignment="Center"
-                                     TextChanged="FillColorBox_TextChanged"/>
-                            <Rectangle x:Name="FillPreview" Width="28" Height="24" Margin="5,0,0,0"
-                                       Fill="White" Stroke="#AAAAAA" StrokeThickness="1"/>
+                <TabItem x:Name="EditorTab" Header="Edytor">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="12" Background="#F5F5F5">
+
+                            <TextBlock Text="Edycja stanu" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
+
+                            <Button x:Name="DeleteButton" Content="Usuń stan"
+                                    IsEnabled="False" Padding="6,5" Margin="0,0,0,8"
+                                    Click="DeleteState_Click"/>
+
+                            <CheckBox x:Name="AcceptingCheckbox"
+                                      Content="Oznacz jako akceptujący"
+                                      IsEnabled="False" Margin="0,0,0,6"
+                                      Click="Accepting_Click"/>
+
+                            <CheckBox x:Name="InitialCheckbox"
+                                      Content="Oznacz jako początkowy"
+                                      IsEnabled="False" Margin="0,0,0,10"
+                                      Click="Initial_Click"/>
+
+                            <StackPanel x:Name="StateAppearancePanel" IsEnabled="False">
+
+                                <TextBlock Text="Kolor wypełnienia" FontSize="11" Foreground="#555" Margin="0,0,0,3"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <TextBox x:Name="FillColorBox" Width="110" Text="#FFFFFF"
+                                             Padding="3,2" VerticalContentAlignment="Center"
+                                             TextChanged="FillColorBox_TextChanged"/>
+                                    <Rectangle x:Name="FillPreview" Width="26" Height="22" Margin="5,0,0,0"
+                                               Fill="White" Stroke="#AAA" StrokeThickness="1"/>
+                                </StackPanel>
+
+                                <TextBlock Text="Kolor krawędzi" FontSize="11" Foreground="#555" Margin="0,0,0,3"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <TextBox x:Name="StrokeColorBox" Width="110" Text="#222222"
+                                             Padding="3,2" VerticalContentAlignment="Center"
+                                             TextChanged="StrokeColorBox_TextChanged"/>
+                                    <Rectangle x:Name="StrokePreview" Width="26" Height="22" Margin="5,0,0,0"
+                                               Fill="#222222" Stroke="#AAA" StrokeThickness="1"/>
+                                </StackPanel>
+
+                                <TextBlock Text="Promień" FontSize="11" Foreground="#555" Margin="0,0,0,3"/>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="34"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Slider x:Name="RadiusSlider" Grid.Column="0"
+                                            Minimum="15" Maximum="60" Value="25"
+                                            TickFrequency="1" IsSnapToTickEnabled="True"
+                                            VerticalAlignment="Center"
+                                            ValueChanged="RadiusSlider_ValueChanged"/>
+                                    <TextBlock x:Name="RadiusValue" Grid.Column="1" Text="25"
+                                               TextAlignment="Right" VerticalAlignment="Center" Margin="3,0,0,0"/>
+                                </Grid>
+
+                                <TextBlock Text="Grubość krawędzi" FontSize="11" Foreground="#555" Margin="0,0,0,3"/>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="34"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Slider x:Name="ThicknessSlider" Grid.Column="0"
+                                            Minimum="1" Maximum="8" Value="2"
+                                            VerticalAlignment="Center"
+                                            ValueChanged="ThicknessSlider_ValueChanged"/>
+                                    <TextBlock x:Name="ThicknessValue" Grid.Column="1" Text="2"
+                                               TextAlignment="Right" VerticalAlignment="Center" Margin="3,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <Separator Margin="0,8,0,10"/>
+
+                            <TextBlock Text="Przejścia" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
+
+                            <TextBlock Text="Stan źródłowy" FontSize="11" Foreground="#555" Margin="0,0,0,3"/>
+                            <ComboBox x:Name="SourceStateCombo"
+                                      ItemsSource="{Binding States}"
+                                      DisplayMemberPath="Name"
+                                      Margin="0,0,0,8"/>
+
+                            <TextBlock Text="Stan docelowy" FontSize="11" Foreground="#555" Margin="0,0,0,3"/>
+                            <ComboBox x:Name="TargetStateCombo"
+                                      ItemsSource="{Binding States}"
+                                      DisplayMemberPath="Name"
+                                      Margin="0,0,0,8"/>
+
+                            <TextBlock Text="Etykieta (np. 0,1)" FontSize="11" Foreground="#555" Margin="0,0,0,3"/>
+                            <TextBox x:Name="LabelBox" Padding="4,3" Margin="0,0,0,10"/>
+
+                            <Button Content="Dodaj przejście"
+                                    Padding="6,5" Margin="0,0,0,6"
+                                    Click="AddTransition_Click"/>
+
+                            <Button x:Name="DeleteTransitionButton" Content="Usuń przejście"
+                                    IsEnabled="False" Padding="6,5" Margin="0,0,0,12"
+                                    Click="DeleteTransition_Click"/>
+
+                            <Separator Margin="0,0,0,8"/>
+                            <TextBlock Text="Alfabet" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBlock x:Name="AlphabetText" Text="∅"
+                                       FontSize="12" TextWrapping="Wrap" Foreground="#333"/>
+
+                            <Separator Margin="0,10,0,8"/>
+                            <Button Content="Importuj JSON..."
+                                    Padding="6,5" Margin="0,0,0,4"
+                                    Click="MenuImport_Click"/>
+                            <Button Content="Eksportuj JSON..."
+                                    Padding="6,5" Margin="0,0,0,4"
+                                    Click="MenuExportJson_Click"/>
+                            <Button Content="Eksportuj obraz..."
+                                    Padding="6,5"
+                                    Click="MenuExportImage_Click"/>
+
                         </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
 
-                        <TextBlock Text="Kolor krawędzi" FontSize="11" Foreground="#555" Margin="0,0,0,3"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                            <TextBox x:Name="StrokeColorBox" Width="120" Text="#222222"
-                                     Padding="3,2" VerticalContentAlignment="Center"
-                                     TextChanged="StrokeColorBox_TextChanged"/>
-                            <Rectangle x:Name="StrokePreview" Width="28" Height="24" Margin="5,0,0,0"
-                                       Fill="#222222" Stroke="#AAAAAA" StrokeThickness="1"/>
+                <TabItem x:Name="SimTab" Header="Symulacja">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="12" Background="#F5F5F5">
+
+                            <TextBlock Text="Słowo wejściowe" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"/>
+
+                            <TextBox x:Name="WordInputBox" Padding="4,3" Margin="0,0,0,6"
+                                     TextChanged="WordInputBox_TextChanged"/>
+
+                            <Button Content="Uruchom symulację"
+                                    Padding="6,5" Margin="0,0,0,10"
+                                    Click="StartSim_Click"/>
+
+                            <Border BorderBrush="#DDDDDD" BorderThickness="1"
+                                    Background="White" Padding="6" Margin="0,0,0,10"
+                                    MinHeight="32">
+                                <TextBlock x:Name="WordDisplay"
+                                           FontFamily="Courier New" FontSize="14"
+                                           TextWrapping="Wrap"/>
+                            </Border>
+
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button x:Name="PrevButton" Grid.Column="0"
+                                        Content="◀ Wstecz" IsEnabled="False"
+                                        Padding="4,5" Click="Prev_Click"/>
+                                <Button x:Name="NextButton" Grid.Column="2"
+                                        Content="Dalej ▶" IsEnabled="False"
+                                        Padding="4,5" Click="Next_Click"/>
+                            </Grid>
+
+                            <TextBlock x:Name="ResultText" FontSize="13" FontWeight="Bold"
+                                       TextAlignment="Center" Margin="0,0,0,10" TextWrapping="Wrap"/>
+
+                            <TextBlock Text="Historia" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <ListBox x:Name="HistoryList" Height="150"
+                                     FontSize="11" Margin="0,0,0,10"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
+
+                            <Separator Margin="0,0,0,10"/>
+
+                            <TextBlock Text="Animacja" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"/>
+
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="4"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="4"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button x:Name="StartAnimButton" Grid.Column="0"
+                                        Content="▶ Start" IsEnabled="False"
+                                        Padding="4,5" Click="StartAnim_Click"/>
+                                <Button x:Name="StopAnimButton" Grid.Column="2"
+                                        Content="■ Stop" IsEnabled="False"
+                                        Padding="4,5" Click="StopAnim_Click"/>
+                                <Button x:Name="ResetSimButton" Grid.Column="4"
+                                        Content="⟳ Reset" IsEnabled="False"
+                                        Padding="4,5" Click="ResetSim_Click"/>
+                            </Grid>
+
+                            <TextBlock Text="Szybkość (kroków/s)" FontSize="11" Foreground="#555" Margin="0,0,0,3"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="34"/>
+                                </Grid.ColumnDefinitions>
+                                <Slider x:Name="AnimSpeedSlider" Grid.Column="0"
+                                        Minimum="0.5" Maximum="8" Value="2"
+                                        VerticalAlignment="Center"
+                                        ValueChanged="AnimSpeedSlider_ValueChanged"/>
+                                <TextBlock x:Name="AnimSpeedValue" Grid.Column="1" Text="2"
+                                           TextAlignment="Right" VerticalAlignment="Center" Margin="3,0,0,0"/>
+                            </Grid>
+
                         </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
 
-                        <TextBlock Text="Promień" FontSize="11" Foreground="#555" Margin="0,0,0,3"/>
-                        <Grid Margin="0,0,0,8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="36"/>
-                            </Grid.ColumnDefinitions>
-                            <Slider x:Name="RadiusSlider" Grid.Column="0"
-                                    Minimum="15" Maximum="60" Value="25"
-                                    TickFrequency="1" IsSnapToTickEnabled="True"
-                                    VerticalAlignment="Center"
-                                    ValueChanged="RadiusSlider_ValueChanged"/>
-                            <TextBlock x:Name="RadiusValue" Grid.Column="1" Text="25"
-                                       TextAlignment="Right" VerticalAlignment="Center" Margin="4,0,0,0"/>
-                        </Grid>
-
-                        <TextBlock Text="Grubość krawędzi" FontSize="11" Foreground="#555" Margin="0,0,0,3"/>
-                        <Grid Margin="0,0,0,6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="36"/>
-                            </Grid.ColumnDefinitions>
-                            <Slider x:Name="ThicknessSlider" Grid.Column="0"
-                                    Minimum="1" Maximum="8" Value="2"
-                                    VerticalAlignment="Center"
-                                    ValueChanged="ThicknessSlider_ValueChanged"/>
-                            <TextBlock x:Name="ThicknessValue" Grid.Column="1" Text="2"
-                                       TextAlignment="Right" VerticalAlignment="Center" Margin="4,0,0,0"/>
-                        </Grid>
-
-                    </StackPanel>
-
-                    <Separator Margin="0,8,0,12"/>
-
-                    <TextBlock Text="Przejścia" FontSize="15" FontWeight="Bold" Margin="0,0,0,10"/>
-
-                    <TextBlock Text="Stan źródłowy" FontSize="11" Foreground="#555" Margin="0,0,0,3"/>
-                    <ComboBox x:Name="SourceStateCombo"
-                              ItemsSource="{Binding States}"
-                              DisplayMemberPath="Name"
-                              Margin="0,0,0,8"/>
-
-                    <TextBlock Text="Stan docelowy" FontSize="11" Foreground="#555" Margin="0,0,0,3"/>
-                    <ComboBox x:Name="TargetStateCombo"
-                              ItemsSource="{Binding States}"
-                              DisplayMemberPath="Name"
-                              Margin="0,0,0,8"/>
-
-                    <TextBlock Text="Etykieta (np. 0,1)" FontSize="11" Foreground="#555" Margin="0,0,0,3"/>
-                    <TextBox x:Name="LabelBox" Padding="4,3" Margin="0,0,0,10"/>
-
-                    <Button Content="Dodaj przejście"
-                            Padding="6,5" Margin="0,0,0,6"
-                            Click="AddTransition_Click"/>
-
-                    <Button x:Name="DeleteTransitionButton" Content="Usuń przejście"
-                            IsEnabled="False" Padding="6,5" Margin="0,0,0,14"
-                            Click="DeleteTransition_Click"/>
-
-                    <Separator Margin="0,0,0,10"/>
-
-                    <TextBlock Text="Alfabet" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                    <TextBlock x:Name="AlphabetText" Text="∅"
-                               FontSize="12" TextWrapping="Wrap" Foreground="#333333"/>
-
-                </StackPanel>
-            </ScrollViewer>
-        </Border>
-
-        <Grid x:Name="DrawingArea"
-              Background="WhiteSmoke"
-              ClipToBounds="True"
-              PreviewMouseLeftButtonDown="DrawingArea_PreviewMouseLeftButtonDown"
-              PreviewMouseMove="DrawingArea_PreviewMouseMove"
-              PreviewMouseLeftButtonUp="DrawingArea_PreviewMouseLeftButtonUp">
-
-            <Canvas x:Name="TransitionsCanvas"/>
-
-            <ItemsControl x:Name="StatesControl" ItemsSource="{Binding States}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <Canvas Background="Transparent"/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemContainerStyle>
-                    <Style TargetType="ContentPresenter">
-                        <Setter Property="Canvas.Left" Value="{Binding X}"/>
-                        <Setter Property="Canvas.Top" Value="{Binding Y}"/>
-                    </Style>
-                </ItemsControl.ItemContainerStyle>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Grid Width="{Binding Diameter}" Height="{Binding Diameter}" Background="Transparent">
-                            <Ellipse x:Name="OuterEllipse"
-                                     Width="{Binding Diameter}" Height="{Binding Diameter}"
-                                     Fill="{Binding FillColor, Converter={StaticResource HexToBrushConverter}}"
-                                     Stroke="{Binding StrokeColor, Converter={StaticResource HexToBrushConverter}}"
-                                     StrokeThickness="{Binding StrokeThickness}"/>
-                            <Ellipse x:Name="SelectionOverlay"
-                                     Width="{Binding Diameter}" Height="{Binding Diameter}"
-                                     Fill="#440066FF"
-                                     Visibility="Collapsed"
-                                     IsHitTestVisible="False"/>
-                            <Ellipse x:Name="InnerEllipse"
-                                     Width="{Binding InnerDiameter}" Height="{Binding InnerDiameter}"
-                                     Fill="Transparent"
-                                     Stroke="{Binding StrokeColor, Converter={StaticResource HexToBrushConverter}}"
-                                     StrokeThickness="{Binding StrokeThickness}"
-                                     Visibility="Collapsed"
-                                     IsHitTestVisible="False"/>
-                            <TextBlock Text="{Binding Name}"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"
-                                       FontSize="12" FontWeight="SemiBold"
-                                       IsHitTestVisible="False"/>
-                        </Grid>
-                        <DataTemplate.Triggers>
-                            <DataTrigger Binding="{Binding IsAccepting}" Value="True">
-                                <Setter TargetName="InnerEllipse" Property="Visibility" Value="Visible"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding IsInitial}" Value="True">
-                                <Setter TargetName="OuterEllipse" Property="Stroke" Value="#E65100"/>
-                                <Setter TargetName="OuterEllipse" Property="StrokeThickness" Value="3"/>
-                                <Setter TargetName="InnerEllipse" Property="Stroke" Value="#E65100"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                <Setter TargetName="SelectionOverlay" Property="Visibility" Value="Visible"/>
-                            </DataTrigger>
-                        </DataTemplate.Triggers>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-
+            </TabControl>
         </Grid>
     </DockPanel>
 </Window>

@@ -34,7 +34,7 @@ public class State : INotifyPropertyChanged
     private double _x, _y;
     private double _radius = 25.0;
     private double _strokeThickness = 2.0;
-    private bool _isInitial, _isAccepting, _isSelected;
+    private bool _isInitial, _isAccepting, _isSelected, _isActive;
     private string _fillColor = "#FFFFFF";
     private string _strokeColor = "#222222";
 
@@ -45,6 +45,7 @@ public class State : INotifyPropertyChanged
     public bool IsInitial { get => _isInitial; set { _isInitial = value; OnPropertyChanged(); } }
     public bool IsAccepting { get => _isAccepting; set { _isAccepting = value; OnPropertyChanged(); } }
     public bool IsSelected { get => _isSelected; set { _isSelected = value; OnPropertyChanged(); } }
+    public bool IsActive { get => _isActive; set { _isActive = value; OnPropertyChanged(); } }
 
     public double Radius
     {
@@ -83,7 +84,7 @@ public class Transition : INotifyPropertyChanged
     private State _source = null!;
     private State _target = null!;
     private string _label = "";
-    private bool _isSelected;
+    private bool _isSelected, _isActive;
 
     public State Source
     {
@@ -107,6 +108,12 @@ public class Transition : INotifyPropertyChanged
     {
         get => _isSelected;
         set { _isSelected = value; OnPropertyChanged(); }
+    }
+
+    public bool IsActive
+    {
+        get => _isActive;
+        set { _isActive = value; OnPropertyChanged(); }
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
