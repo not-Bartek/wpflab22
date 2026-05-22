@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.IO;
 using System.Linq;
+using Path = System.Windows.Shapes.Path;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
