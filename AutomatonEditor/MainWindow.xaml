@@ -133,7 +133,9 @@
                                              Padding="3,2" VerticalContentAlignment="Center"
                                              TextChanged="FillColorBox_TextChanged"/>
                                     <Rectangle x:Name="FillPreview" Width="26" Height="22" Margin="5,0,0,0"
-                                               Fill="White" Stroke="#AAA" StrokeThickness="1"/>
+                                               Fill="White" Stroke="#AAA" StrokeThickness="1"
+                                               Cursor="Hand"
+                                               MouseLeftButtonDown="FillPreview_Click"/>
                                 </StackPanel>
 
                                 <TextBlock Text="Kolor krawędzi" FontSize="11" Foreground="#555" Margin="0,0,0,3"/>
@@ -142,7 +144,9 @@
                                              Padding="3,2" VerticalContentAlignment="Center"
                                              TextChanged="StrokeColorBox_TextChanged"/>
                                     <Rectangle x:Name="StrokePreview" Width="26" Height="22" Margin="5,0,0,0"
-                                               Fill="#222222" Stroke="#AAA" StrokeThickness="1"/>
+                                               Fill="#222222" Stroke="#AAA" StrokeThickness="1"
+                                               Cursor="Hand"
+                                               MouseLeftButtonDown="StrokePreview_Click"/>
                                 </StackPanel>
 
                                 <TextBlock Text="Promień" FontSize="11" Foreground="#555" Margin="0,0,0,3"/>

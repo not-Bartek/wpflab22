@@ -392,6 +392,70 @@ public partial class MainWindow : Window
         catch { }
     }
 
+    private void FillPreview_Click(object sender, MouseButtonEventArgs e)
+        => ShowColorPickerPopup(FillColorBox, (UIElement)sender);
+
+    private void StrokePreview_Click(object sender, MouseButtonEventArgs e)
+        => ShowColorPickerPopup(StrokeColorBox, (UIElement)sender);
+
+    private static readonly string[] PaletteColors =
+    [
+        "#000000","#222222","#444444","#666666","#888888","#AAAAAA","#CCCCCC","#FFFFFF",
+        "#FF0000","#FF4500","#FF8C00","#FFD700","#ADFF2F","#00FF00","#00FA9A","#00FFFF",
+        "#1E90FF","#0000FF","#8A2BE2","#FF00FF","#FF1493","#FF69B4","#FFA07A","#F5DEB3",
+        "#8B0000","#A0522D","#2E8B57","#006400","#008B8B","#00008B","#4B0082","#800080",
+        "#FFF8DC","#FFFACD","#E0FFE0","#E0F0FF","#F0E0FF","#FFE0E0","#E6E6FA","#F5F5DC"
+    ];
+
+    private void ShowColorPickerPopup(TextBox targetBox, UIElement anchor)
+    {
+        var popup = new System.Windows.Controls.Primitives.Popup
+        {
+            PlacementTarget = anchor,
+            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
+            StaysOpen = false,
+            AllowsTransparency = true
+        };
+
+        var border = new Border
+        {
+            Background = Brushes.White,
+            BorderBrush = new SolidColorBrush(Color.FromRgb(180, 180, 180)),
+            BorderThickness = new Thickness(1),
+            Padding = new Thickness(6),
+            Effect = new System.Windows.Media.Effects.DropShadowEffect
+                { BlurRadius = 8, ShadowDepth = 2, Opacity = 0.25 }
+        };
+
+        var wrap = new WrapPanel { Width = 176 };
+        foreach (var hex in PaletteColors)
+        {
+            var swatch = new Border
+            {
+                Width = 20, Height = 20, Margin = new Thickness(2),
+                Background = (Brush)new BrushConverter().ConvertFrom(hex)!,
+                BorderBrush = new SolidColorBrush(Color.FromRgb(160, 160, 160)),
+                BorderThickness = new Thickness(1),
+                Cursor = Cursors.Hand,
+                ToolTip = hex
+            };
+            var captured = hex;
+            swatch.MouseLeftButtonDown += (_, _) =>
+            {
+                targetBox.Text = captured;
+                popup.IsOpen = false;
+            };
+            swatch.MouseEnter += (s, _) => ((Border)s).BorderBrush = Brushes.Black;
+            swatch.MouseLeave += (s, _) =>
+                ((Border)s).BorderBrush = new SolidColorBrush(Color.FromRgb(160, 160, 160));
+            wrap.Children.Add(swatch);
+        }
+
+        border.Child = wrap;
+        popup.Child = border;
+        popup.IsOpen = true;
+    }
+
     private void AddTransition_Click(object sender, RoutedEventArgs e)
     {
         var source = SourceStateCombo.SelectedItem as State;
