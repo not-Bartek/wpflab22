@@ -99,6 +99,7 @@ public partial class MainWindow : Window
     private readonly List<(State From, string Symbol, Transition Trans, State To)> _simHistory = new();
     private readonly System.Collections.ObjectModel.ObservableCollection<string> _historyItems = new();
     private readonly DispatcherTimer _animTimer = new();
+    private Transition? _simActiveTransition;
 
     private enum StepResult { Success, WordComplete, NoTransition }
 
@@ -396,12 +397,43 @@ public partial class MainWindow : Window
         var source = SourceStateCombo.SelectedItem as State;
         var target = TargetStateCombo.SelectedItem as State;
         if (source == null || target == null) return;
-        _automaton.Transitions.Add(new Transition
+
+        var label = LabelBox.Text.Trim();
+        if (string.IsNullOrEmpty(label))
         {
-            Source = source,
-            Target = target,
-            Label = LabelBox.Text.Trim()
-        });
+            MessageBox.Show("Etykieta przejścia nie może być pusta.", "Błąd", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var newSymbols = label.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(s => s.Trim()).ToList();
+
+        var usedSymbols = _automaton.Transitions
+            .Where(t => t.Source == source)
+            .SelectMany(t => (t.Label ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(s => s.Trim()))
+            .ToHashSet();
+
+        var conflicts = newSymbols.Where(s => usedSymbols.Contains(s)).ToList();
+        if (conflicts.Count > 0)
+        {
+            MessageBox.Show(
+                $"Ze stanu {source.Name} istnieje już przejście dla symboli: {string.Join(", ", conflicts)}.",
+                "Konflikt DFA", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var existing = _automaton.Transitions.FirstOrDefault(t => t.Source == source && t.Target == target);
+        if (existing != null)
+        {
+            var merged = (existing.Label ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Concat(newSymbols).Distinct().OrderBy(s => s);
+            existing.Label = string.Join(",", merged);
+        }
+        else
+        {
+            _automaton.Transitions.Add(new Transition { Source = source, Target = target, Label = label });
+        }
         LabelBox.Clear();
     }
 
@@ -822,6 +854,7 @@ public partial class MainWindow : Window
         _simCurrentState = initial;
         ResultText.Text = "";
 
+        WordInputBox.IsEnabled = false;
         ClearSimHighlights();
         _simCurrentState.IsActive = true;
         RedrawTransitions();
@@ -846,12 +879,16 @@ public partial class MainWindow : Window
         _simHistory.RemoveAt(_simHistory.Count - 1);
         if (_historyItems.Count > 0) _historyItems.RemoveAt(_historyItems.Count - 1);
 
-        last.Trans.IsActive = false;
         if (_simCurrentState != null) _simCurrentState.IsActive = false;
+        if (_simActiveTransition != null) _simActiveTransition.IsActive = false;
 
         _simCurrentState = last.From;
         _simStep--;
         _simCurrentState.IsActive = true;
+
+        _simActiveTransition = _simHistory.Count > 0 ? _simHistory[^1].Trans : null;
+        if (_simActiveTransition != null) _simActiveTransition.IsActive = true;
+
         ResultText.Text = "";
         RedrawTransitions();
         UpdateWordDisplay();
@@ -884,6 +921,7 @@ public partial class MainWindow : Window
         _simCurrentState = initial;
         _simCurrentState.IsActive = true;
         ResultText.Text = "";
+        WordInputBox.IsEnabled = false;
         RedrawTransitions();
         UpdateWordDisplay();
         UpdateSimButtons();
@@ -926,7 +964,9 @@ public partial class MainWindow : Window
         _historyItems.Add($"{_simCurrentState.Name} →[{symbol}]→ {transition.Target.Name}");
 
         prevActive.IsActive = false;
+        if (_simActiveTransition != null) _simActiveTransition.IsActive = false;
         transition.IsActive = true;
+        _simActiveTransition = transition;
         _simCurrentState = transition.Target;
         _simCurrentState.IsActive = true;
         _simStep++;
@@ -952,6 +992,7 @@ public partial class MainWindow : Window
     {
         foreach (var s in _automaton.States) s.IsActive = false;
         foreach (var t in _automaton.Transitions) t.IsActive = false;
+        _simActiveTransition = null;
     }
 
     private void ResetSimulationState()
@@ -963,6 +1004,7 @@ public partial class MainWindow : Window
         _historyItems.Clear();
         ClearSimHighlights();
         ResultText.Text = "";
+        if (WordInputBox != null) WordInputBox.IsEnabled = true;
         RedrawTransitions();
         UpdateWordDisplay();
         UpdateSimButtons();
