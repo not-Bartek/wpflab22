@@ -7,6 +7,7 @@ namespace AutomatonEditor;
 public class Automaton : INotifyPropertyChanged
 {
     private State? _selectedState;
+    private Transition? _selectedTransition;
 
     public ObservableCollection<State> States { get; set; } = [];
     public ObservableCollection<Transition> Transitions { get; set; } = [];
@@ -17,6 +18,12 @@ public class Automaton : INotifyPropertyChanged
         set { _selectedState = value; OnPropertyChanged(); }
     }
 
+    public Transition? SelectedTransition
+    {
+        get => _selectedTransition;
+        set { _selectedTransition = value; OnPropertyChanged(); }
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
@@ -25,14 +32,46 @@ public class Automaton : INotifyPropertyChanged
 public class State : INotifyPropertyChanged
 {
     private double _x, _y;
+    private double _radius = 25.0;
+    private double _strokeThickness = 2.0;
     private bool _isInitial, _isAccepting, _isSelected;
+    private string _fillColor = "#FFFFFF";
+    private string _strokeColor = "#222222";
 
     public string? Name { get; set; }
+
     public double X { get => _x; set { _x = value; OnPropertyChanged(); } }
     public double Y { get => _y; set { _y = value; OnPropertyChanged(); } }
     public bool IsInitial { get => _isInitial; set { _isInitial = value; OnPropertyChanged(); } }
     public bool IsAccepting { get => _isAccepting; set { _isAccepting = value; OnPropertyChanged(); } }
     public bool IsSelected { get => _isSelected; set { _isSelected = value; OnPropertyChanged(); } }
+
+    public double Radius
+    {
+        get => _radius;
+        set { _radius = value; OnPropertyChanged(); OnPropertyChanged(nameof(Diameter)); OnPropertyChanged(nameof(InnerDiameter)); }
+    }
+
+    public double Diameter => _radius * 2;
+    public double InnerDiameter => Math.Max(0, _radius * 2 - 12);
+
+    public double StrokeThickness
+    {
+        get => _strokeThickness;
+        set { _strokeThickness = value; OnPropertyChanged(); }
+    }
+
+    public string FillColor
+    {
+        get => _fillColor;
+        set { _fillColor = value; OnPropertyChanged(); }
+    }
+
+    public string StrokeColor
+    {
+        get => _strokeColor;
+        set { _strokeColor = value; OnPropertyChanged(); }
+    }
 
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null) =>
@@ -43,52 +82,31 @@ public class Transition : INotifyPropertyChanged
 {
     private State _source = null!;
     private State _target = null!;
+    private string _label = "";
+    private bool _isSelected;
 
     public State Source
     {
         get => _source;
-        set
-        {
-            if (_source != null)
-                _source.PropertyChanged -= State_PropertyChanged;
-            _source = value;
-            if (_source != null)
-                _source.PropertyChanged += State_PropertyChanged;
-            RefreshCoordinates();
-        }
+        set { _source = value; OnPropertyChanged(); }
     }
 
     public State Target
     {
         get => _target;
-        set
-        {
-            if (_target != null)
-                _target.PropertyChanged -= State_PropertyChanged;
-            _target = value;
-            if (_target != null)
-                _target.PropertyChanged += State_PropertyChanged;
-            RefreshCoordinates();
-        }
+        set { _target = value; OnPropertyChanged(); }
     }
 
-    public double X1 => (Source?.X ?? 0) + 25;
-    public double Y1 => (Source?.Y ?? 0) + 25;
-    public double X2 => (Target?.X ?? 0) + 25;
-    public double Y2 => (Target?.Y ?? 0) + 25;
-
-    private void State_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    public string Label
     {
-        if (e.PropertyName == "X" || e.PropertyName == "Y")
-            RefreshCoordinates();
+        get => _label;
+        set { _label = value; OnPropertyChanged(); }
     }
 
-    private void RefreshCoordinates()
+    public bool IsSelected
     {
-        OnPropertyChanged(nameof(X1));
-        OnPropertyChanged(nameof(Y1));
-        OnPropertyChanged(nameof(X2));
-        OnPropertyChanged(nameof(Y2));
+        get => _isSelected;
+        set { _isSelected = value; OnPropertyChanged(); }
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
